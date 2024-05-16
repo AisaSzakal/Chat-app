@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Socket.io Chat App</title>
+    <style>
+        /* Add some basic styling */
+        body { font-family: 'Comic Sans MS', cursive; background-color: #a5a3a3; margin: 0; padding: 0; }
+        form { background: #ffcdcd; padding: 10px; position: fixed; bottom: 0; width: 100%; margin-top: 20px; display: flex; align-items: center; }
+        li { margin-bottom: 10px; padding: 10px; background-color: #fff; border-radius: 10px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        form input { border: none; padding: 10px; width: 70%; margin-right: 10px; /* Increased margin for spacing */ border-radius: 20px; /* Rounded input field */ background-color: #fff; }
+        form button { border: none; border-radius: 5px; padding: 10px 20px; margin-left: 10px; background-color: #ff69b4; color: #fff; font-size: 16px; cursor: pointer; }
+        button:hover { background-color: #ff1493; }
+        #messages { list-style-type: none; margin: 0; padding: 0; }
+        #messages li { padding: 5px 10px; }
+        #messages li:nth-child(odd) { background: #eee; }
+        .gif-button { cursor: pointer; }
+    </style>
+    <meta charset="UTF-8">
+    <script src="https://twemoji.maxcdn.com/v/latest/twemoji.min.js" crossorigin="anonymous"></script>
+</head>
+<body>
+    <ul id="messages"></ul>
+    <form id="messageForm" action="">
+        <input id="m" autocomplete="off" /><button type="submit">Send</button>
+        <button id="gifSearchButton" type="button">Search</button>
+    </form>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+        $(function () {
+            var socket = io();
+            $('form').submit(function(e) {
+                e.preventDefault();
+                socket.emit('chat message', $('#m').val());
+                $('#m').val('');
+                return false;
+            });
+            socket.on('chat message', function(msg){
+                var messageWithEmojis = twemoji.parse(msg);
+                $('#messages').append($('<li>').html(messageWithEmojis));
+                window.scrollTo(0, document.body.scrollHeight);
+            });
+
+            $('#gifSearchButton').click(function() {
+                var searchTerm = $('#m').val();
+                searchGIFs(searchTerm);
+            });
+
+            window.scrollTo(0, document.body.scrollHeight);
+        });
+
+        function sendMessage(message) {
+            var socket = io();
+            socket.emit('chat message', message);
+        }
+
+        // Function to search for GIFs using Giphy API
+        function searchGIFs(query) {
+            var apiKey = 'taXd2ZyHwGP5CSMm1IK8VTKz8ioXI1fT';
+            var url = 'https://api.giphy.com/v1/gifs/search?q=' + query + '&api_key=' + apiKey;
+
+            $.get(url, function(data) {
+                // Clear previous GIFs
+                $('#gifs').remove();
+
+                // Display GIFs in the chat interface
+                var gifs = data.data;
+                var $gifsContainer = $('<div id="gifs">');
+                gifs.forEach(function(gif) {
+                    // Display each GIF as a clickable image
+                    var $img = $('<img>').attr('src', gif.images.fixed_height.url).addClass('gif-button');
+                    $img.click(function() {
+                        // When a GIF is clicked, send it as a chat message
+                        sendMessage('<img src="' + gif.images.fixed_height.url + '">');
+                        // Remove other GIFs
+                        $('#gifs').remove();
+                    });
+                    $gifsContainer.append($img);
+                });
+                $('#messages').append($gifsContainer);
+            }).fail(function() {
+                console.error('Error searching GIFs');
+            });
+        }
+    </script>
+</body>
+</html>
